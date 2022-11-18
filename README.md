@@ -17,7 +17,7 @@ applications. Some of the features demonstrated in this example are:
 This repository is versioned together with the [Zephyr main tree][zephyr]. This
 means that every time that Zephyr is tagged, this repository is tagged as well
 with the same version number, and the [manifest](west.yml) entry for `zephyr`
-will point to the corresponding Zephyr tag. For example, `example-application`
+will point to the corresponding Zephyr tag. For example, `zoracle`
 v2.6.0 will point to Zephyr v2.6.0. Note that the `main` branch will always
 point to the development branch of Zephyr, also `main`.
 
@@ -39,12 +39,12 @@ environment. You can follow the official
 ### Initialization
 
 The first step is to initialize the workspace folder (``my-workspace``) where
-the ``example-application`` and all Zephyr modules will be cloned. You can do
+the ``zoracle`` and all Zephyr modules will be cloned. You can do
 that by running:
 
 ```shell
-# initialize my-workspace for the example-application (main branch)
-west init -m https://github.com/zephyrproject-rtos/example-application --mr main my-workspace
+# initialize my-workspace for the zoracle (main branch)
+west init -m https://github.com/zephyrproject-rtos/zoracle --mr main my-workspace
 # update Zephyr modules
 cd my-workspace
 west update

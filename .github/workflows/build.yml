@@ -12,10 +12,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          path: example-application
+          path: zoracle
 
       - name: Initialize
-        working-directory: example-application
+        working-directory: zoracle
         run: |
           pip3 install -U west
           west init -l .
@@ -23,12 +23,12 @@ jobs:
           pip3 install -r ../zephyr/scripts/requirements-base.txt
 
       - name: Build firmware
-        working-directory: example-application
+        working-directory: zoracle
         run: |
           west build -b custom_plank app
 
       - name: Twister Unit Tests
-        working-directory: example-application
+        working-directory: zoracle
         run: |
           ../zephyr/scripts/twister -p qemu_cortex_m0 --testcase-root ./tests/
 
@@ -36,4 +36,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: firmware
-          path: example-application/build/zephyr/zephyr.*
+          path: zoracle/build/zephyr/zephyr.*

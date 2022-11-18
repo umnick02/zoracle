@@ -3,7 +3,7 @@
 
 manifest:
   self:
-    path: example-application
+    path: zoracle
     west-commands: scripts/west-commands.yml
 
   remotes:
