@@ -6,7 +6,6 @@
 
 static bool configured;
 static const struct device *hdev;
-static struct k_work report_send;
 static ATOMIC_DEFINE(hid_ep_in_busy, 1);
 
 #define HID_EP_BUSY_FLAG 0
@@ -22,8 +21,7 @@ static struct report {
 };
 char *report_msg;
 
-static void report_event_handler(struct k_timer *dummy);
-static K_TIMER_DEFINE(event_timer, report_event_handler, NULL);
+static void send_report();
 
 /*
  * Simple HID Report Descriptor
@@ -46,7 +44,7 @@ static const uint8_t hid_report_desc[] = {
         HID_END_COLLECTION,
 };
 
-static void send_report(struct k_work *work) {
+static void send_report() {
     int wrote;
     if (!atomic_test_and_set_bit(hid_ep_in_busy, HID_EP_BUSY_FLAG)) {
         strncpy(report_1.value, report_msg, 8);
@@ -65,11 +63,11 @@ static void int_in_ready_cb(const struct device *dev) {
  * report value is not incremented here.
  */
 static void on_idle_cb(const struct device *dev, uint16_t report_id) {
-    k_work_submit(&report_send);
+    send_report();
 }
 
 static void report_event_handler(struct k_timer *dummy) {
-    k_work_submit(&report_send);
+    send_report();
 }
 
 static const struct hid_ops ops = {
@@ -101,7 +99,6 @@ static void init(void) {
     if (ret != 0) {
         return;
     }
-    k_work_init(&report_send, send_report);
 }
 
 static void write_message(char *msg) {
@@ -109,6 +106,7 @@ static void write_message(char *msg) {
         init();
     }
     report_msg = msg;
+    send_report();
 }
 
 static int composite_pre_init(const struct device *dev) {
@@ -119,7 +117,6 @@ static int composite_pre_init(const struct device *dev) {
     usb_hid_register_device(hdev, hid_report_desc, sizeof(hid_report_desc), &ops);
 
     atomic_set_bit(hid_ep_in_busy, HID_EP_BUSY_FLAG);
-    k_timer_start(&event_timer, REPORT_PERIOD, REPORT_PERIOD);
 
     usb_hid_set_proto_code(hdev, HID_BOOT_IFACE_CODE_NONE);
 
