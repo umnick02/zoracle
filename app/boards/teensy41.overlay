@@ -1,0 +1,13 @@
+&lpi2c1 {
+	status = "okay";
+	mpu9250@68 {
+        compatible = "invensense,mpu9250";
+        reg = <0x68>;
+        irq-gpios = <&gpio2 18 GPIO_ACTIVE_HIGH>, <&gpio2 19 GPIO_ACTIVE_HIGH>;
+        gyro-sr-div = <10>;
+        gyro-dlpf = <5>;
+        gyro-fs = <250>;
+        accel-fs = <2>;
+        accel-dlpf="5.05";
+	};
+};
