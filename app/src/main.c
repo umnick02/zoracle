@@ -1,26 +1,15 @@
-/*
- * Copyright (c) 2021 Nordic Semiconductor ASA
- * SPDX-License-Identifier: Apache-2.0
- */
-
-#include "hid_write.c"
+#include "main.h"
+#include "app_version.h"
 
 #include <zephyr/kernel.h>
-#include <zephyr/drivers/gpio.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
-/* 1000 msec = 1 sec */
-#define SLEEP_TIME_MS   1000
 
-/* The devicetree node identifier for the "led0" alias. */
-#define LED0_NODE DT_ALIAS(led0)
-#include "app_version.h"
 #include <stdio.h>
-#include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
 
-static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
-char *hid_msg;
+#if DEBUG == 1
+#include "hid_msg.c"
+#endif
 
 //static const char *now_str(void)
 //{
@@ -93,18 +82,20 @@ char *hid_msg;
 //}
 //#endif /* CONFIG_MPU9250_TRIGGER */
 
-void main(void)
-{
-    int ret;
+void main(void) {
+    LOG_INF("Starting application");
 
     if (!device_is_ready(led.port)) {
         return;
     }
 
-    ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
-    if (ret < 0) {
+    if (gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE) < 0) {
         return;
     }
+
+#if DEBUG == 1
+    hid_init();
+#endif
 
 //    const struct device *const mpu9250 = DEVICE_DT_GET_ONE(invensense_mpu9250);
 //
@@ -128,8 +119,7 @@ void main(void)
 
     int i = 0;
     while (1) {
-        ret = gpio_pin_toggle_dt(&led);
-        if (ret < 0) {
+        if (gpio_pin_toggle_dt(&led) < 0) {
             return;
         }
 //        int rc = process_mpu9250(mpu9250);
@@ -138,8 +128,11 @@ void main(void)
 //            break;
 //        }
         i++;
-        sprintf(hid_msg, "msg: %d", i);
+    #if DEBUG == 1
+        char hid_msg[8];
+        snprintf(hid_msg, sizeof(hid_msg), "tick: %d", i);
         write_message(hid_msg);
+    #endif
         k_msleep(SLEEP_TIME_MS);
     }
 }

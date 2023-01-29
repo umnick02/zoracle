@@ -1,3 +1,5 @@
+#include "main.h"
+
 #include <zephyr/kernel.h>
 #include <zephyr/init.h>
 
@@ -10,7 +12,6 @@ static ATOMIC_DEFINE(hid_ep_in_busy, 1);
 
 #define HID_EP_BUSY_FLAG 0
 #define REPORT_ID_1	0x01
-#define REPORT_PERIOD K_SECONDS(1)
 
 static struct report {
     uint8_t id;
@@ -19,17 +20,10 @@ static struct report {
         .id = REPORT_ID_1,
         .value = "",
 };
-char *report_msg;
 
-static void send_report();
+static void hid_init();
+static void write_message(char *msg);
 
-/*
- * Simple HID Report Descriptor
- * Report ID is present for completeness, although it can be omitted.
- * Output of "usbhid-dump -d 2fe3:0006 -e descriptor":
- *  05 01 09 00 A1 01 15 00    26 FF 00 85 01 75 08 95
- *  01 09 00 81 02 C0
- */
 static const uint8_t hid_report_desc[] = {
         HID_USAGE_PAGE(HID_USAGE_GEN_DESKTOP),
         HID_USAGE(HID_USAGE_GEN_DESKTOP_UNDEFINED),
@@ -45,34 +39,30 @@ static const uint8_t hid_report_desc[] = {
 };
 
 static void send_report() {
-    int wrote;
     if (!atomic_test_and_set_bit(hid_ep_in_busy, HID_EP_BUSY_FLAG)) {
-        strncpy(report_1.value, report_msg, 8);
-        hid_int_ep_write(hdev, (uint8_t *)&report_1, sizeof(report_1), &wrote);
+        int ret, wrote;
+        ret = hid_int_ep_write(hdev, (uint8_t *)&report_1, sizeof(report_1), &wrote);
+        if (ret != 0) {
+            /*
+             * Do nothing and wait until host has reset the device
+             * and hid_ep_in_busy is cleared.
+             */
+            LOG_ERR("Failed to submit report");
+        } else {
+            LOG_DBG("Report submitted");
+        }
     }
 }
 
 static void int_in_ready_cb(const struct device *dev) {
     ARG_UNUSED(dev);
-    atomic_test_and_clear_bit(hid_ep_in_busy, HID_EP_BUSY_FLAG);
-}
-
-/*
- * On Idle callback is available here as an example even if actual use is
- * very limited. In contrast to report_event_handler(),
- * report value is not incremented here.
- */
-static void on_idle_cb(const struct device *dev, uint16_t report_id) {
-    send_report();
-}
-
-static void report_event_handler(struct k_timer *dummy) {
-    send_report();
+    if (!atomic_test_and_clear_bit(hid_ep_in_busy, HID_EP_BUSY_FLAG)) {
+        LOG_WRN("IN endpoint callback without preceding buffer write");
+    }
 }
 
 static const struct hid_ops ops = {
         .int_in_ready = int_in_ready_cb,
-        .on_idle = on_idle_cb,
 };
 
 static void status_cb(enum usb_dc_status_code status, const uint8_t *param) {
@@ -94,18 +84,20 @@ static void status_cb(enum usb_dc_status_code status, const uint8_t *param) {
 }
 
 int ret = -1;
-static void init(void) {
+static void hid_init(void) {
     ret = usb_enable(status_cb);
     if (ret != 0) {
+        LOG_ERR("Failed to enable USB");
         return;
     }
 }
 
 static void write_message(char *msg) {
-    if (ret == -1) {
-        init();
+    if (ret != 0) {
+        LOG_ERR("USB was not enabled");
+        return;
     }
-    report_msg = msg;
+    strncpy(report_1.value, msg, 8);
     send_report();
 }
 
