@@ -6,6 +6,8 @@
 #include <zephyr/usb/usb_device.h>
 #include <zephyr/usb/class/usb_hid.h>
 
+#include <string.h>
+
 static bool configured;
 static const struct device *hdev;
 static ATOMIC_DEFINE(hid_ep_in_busy, 1);
@@ -83,22 +85,25 @@ static void status_cb(enum usb_dc_status_code status, const uint8_t *param) {
     }
 }
 
-int ret = -1;
+int is_usb_enabled = -1;
 static void hid_init(void) {
-    ret = usb_enable(status_cb);
-    if (ret != 0) {
+    is_usb_enabled = usb_enable(status_cb);
+    if (is_usb_enabled != 0) {
         LOG_ERR("Failed to enable USB");
         return;
     }
 }
 
-static void write_message(char *msg) {
-    if (ret != 0) {
+static void write_message(char msg[]) {
+    if (is_usb_enabled != 0) {
         LOG_ERR("USB was not enabled");
         return;
     }
-    strncpy(report_1.value, msg, 8);
-    send_report();
+    for (int i = 0; i < strlen(msg); i += 7) {
+        strncpy(report_1.value, msg + i, 7);
+        send_report();
+        k_msleep(50);
+    }
 }
 
 static int composite_pre_init(const struct device *dev) {
