@@ -38,7 +38,7 @@ static int mpu_process(const struct device *dev) {
         sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &temperature);
     }
     if (rc == 0) {
-        LOG_INF("%g Cel\naccel %f %f %f m/s^2\ngyro  %f %f %f rad/s\nmagn  %f %f %f nT\n",
+        LOG_INF("%g Cel\naccel %f %f %f m/s^2\ngyro  %f %f %f rad/s\nmagn  %f %f %f G\n",
                 sensor_value_to_double(&temperature),
                 sensor_value_to_double(&accel[0]),
                 sensor_value_to_double(&accel[1]),
